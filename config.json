@@ -1,0 +1,17 @@
+{
+  "event_chan": "/user/event",
+  "reply_chan": "/user/reply",
+  "data_chan": "/user/blobs",
+  "cancel_chan": "/user/cancel",
+  "path_to_data_folder": "./",
+  "qos_level": 2,
+  "path_to_log": "./log.json",
+  "limit_to_save": 16,
+  "debug": true,
+  "path_to_event_list": "./events.json",
+  "time_to_cancel":{
+    "l3": 300,
+    "l2": 600,
+    "l1": 1500
+  }
+}
