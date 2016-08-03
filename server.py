@@ -39,6 +39,41 @@ m = mqtt.Client()
 m.connect("127.0.0.1")
 for i in ("data_chan", "event_chan", "reply_chan", "cancel_chan"):
     m.subscribe(conf[i])
+class Event:
+    """This class defines an Event."""
+    def __setattr__(self, name, value):
+        object.__setattr__(self, name, value)
+        if name=="long":
+            object.__setattr__(self, "location", [location[0], value])
+        elif name=="lat":
+            object.__setattr__(self, "location", [value, location[1]])
+        elif name=="location":
+            object.__setattr__(self, "lat", value[0])
+            object.__setattr__(self, "long", value[1])
+
+
+    def import_dict(self, dic):
+        self.euid=dic["euid"]
+        self.uuid=dic["uuid"]
+        self.timestamp=dic["timestamp"]
+        self.level=dic["level"]
+        self.location=dic["location"]
+        self.long=self.location[1]
+        self.lat=self.location[0]
+
+
+    def __init__(self, dic=None):
+        self.level=0
+        self.lat=0
+        self.long=0
+        self.timestamp=0
+        self.uuid="00000000-0000-0000-0000-000000000000"
+        self.euid=self.uuid
+        if dic is not None:
+            if not isinstance(dic, dict):
+                raise TypeError("Expected type dict, but got "+str(type(dic))+" instead")
+            else:
+                self.import_dict(dic)
 
 
 def cancelmoose():
@@ -47,21 +82,21 @@ def cancelmoose():
     global to_cancel
     while 1:
         for i in events:
-            if i["timestamp"]+conf["time_to_cancel"]["l"+str(i["level"])] < time.time():
+            if i.timestamp+conf["time_to_cancel"]["l"+str(i.level)] < time.time():
                 try:
                     to_cancel.remove(i)
                 except:
                     pass
                 if conf["debug"]:
-                    print("Event of level "+i["level"]+" from user ID "+i["uuid"]+" with ID "+i["euid"]+" is canceled due to timeout")
+                    print("Event of level "+i.level+" from user ID "+i.uuid+" with ID "+i.euid.+" is canceled due to timeout")
                 events.remove(i)
             if i in to_cancel:
                 to_cancel.remove(i)
                 if conf["debug"]:
-                    print("Event of level "+i["level"]+" from user ID "+i["uuid"]+" with ID "+i["euid"]+" is canceled because of request")
+                    print("Event of level "+i.level+" from user ID "+i.uuid+" with ID "+i.euid+" is canceled because of request")
                 events.remove(i)
 cancelmoose_thread=threading.Thread(target=cancelmoose, name="cancelmoose")
-cancelmoose_thread.daemon=False
+cancelmoose_thread.daemon=True
 cancelmoose_thread.start()
 
 def parser(client, userdata, msg):
@@ -81,8 +116,9 @@ def parser(client, userdata, msg):
     elif msg.topic==conf["event_chan"]:
         message=json.loads(msg.payload)
         message.update({"timestamp":time.time()})
+        message=Event(message)
         if conf["debug"]:
-            print("Recieved event of level "+message["level"]+" from user ID "+message["uuid"]+", which was assigned ID "+message["euid"])
+            print("Recieved event of level "+message.level+" from user ID "+message.uuid+", which was assigned ID "+message.euid)
         events=events+[message]
     elif msg.topic==conf["cancel_chan"]:
         for i in events:
