@@ -66,6 +66,7 @@ class Event:
 
     def __init__(self, dic=None):
         self.level = 0
+        self.location = [0, 0]
         self.lat = 0
         self.long = 0
         self.timestamp = 0
