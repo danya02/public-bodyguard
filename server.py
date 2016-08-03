@@ -53,13 +53,8 @@ class Event:
 
 
     def import_dict(self, dic):
-        self.euid = dic["euid"]
-        self.uuid = dic["uuid"]
-        self.timestamp = dic["timestamp"]
-        self.level = dic["level"]
-        self.location = dic["location"]
-        self.long = self.location[1]
-        self.lat = self.location[0]
+        for i in ("euid", "uuid", "timestamp", "level", "location"):
+            self.__setattr__(i, dic[i])
 
 
     def export_dict(self):
