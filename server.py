@@ -62,6 +62,13 @@ class Event:
         self.lat=self.location[0]
 
 
+    def export_dict(self):
+        dic=dict()
+        for i in ("euid", "uuid", "timestamp", "level", "location"):
+            dic[i]=object.__getattr__(self, i)
+        return dic
+
+
     def __init__(self, dic=None):
         self.level=0
         self.lat=0
