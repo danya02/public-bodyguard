@@ -109,7 +109,7 @@ def parser(client, userdata, msg):
     if messages==conf["limit_to_save"]+1:
         messages=0
         json.dump({"log":log}, open(conf["path_to_log"],"w"))
-        json.dump({"events":log}, open(conf["path_to_event_list"],"w"))
+        json.dump({"events":events}, open(conf["path_to_event_list"],"w"))
     if msg.topic==conf["data_chan"]:
         open(conf["path_to_data_folder"]+msg.payload.partition(
             "::")[0],"w").write(msg.payload.partition("::")[2])
