@@ -19,7 +19,8 @@ import paho.mqtt.client as mqtt
 import json
 import time
 import threading
-import uuid
+import geopy
+import geopy.distance
 global to_cancel
 to_cancel = []
 conf = json.load(open("./config.json"))
@@ -39,30 +40,29 @@ m = mqtt.Client()
 m.connect("127.0.0.1")
 for i in ("data_chan", "event_chan", "reply_chan", "cancel_chan"):
     m.subscribe(conf[i])
+
+
 class Event:
     """This class defines an Event."""
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
         if name == "long":
-            object.__setattr__(self, "location", [location[0], value])
+            object.__setattr__(self, "location", [self.location[0], value])
         elif name == "lat":
-            object.__setattr__(self, "location", [value, location[1]])
+            object.__setattr__(self, "location", [value, self.location[1]])
         elif name == "location":
             object.__setattr__(self, "lat", value[0])
             object.__setattr__(self, "long", value[1])
 
-
     def import_dict(self, dic):
         for i in ("euid", "uuid", "timestamp", "level", "location"):
             self.__setattr__(i, dic[i])
-
 
     def export_dict(self):
         dic = dict()
         for i in ("euid", "uuid", "timestamp", "level", "location"):
             dic[i] = object.__getattr__(self, i)
         return dic
-
 
     def __init__(self, dic=None):
         self.level = 0
@@ -79,6 +79,25 @@ class Event:
                 self.import_dict(dic)
 
 
+class EventHandler:
+    def __setattr__(self, name, value):
+        object.__setattr__(self, name, value)
+        if name == "long":
+            object.__setattr__(self, "location", [self.location[0], value])
+        elif name == "lat":
+            object.__setattr__(self, "location", [value, self.location[1]])
+        elif name == "location":
+            object.__setattr__(self, "lat", value[0])
+            object.__setattr__(self, "long", value[1])
+
+        def get_distance_to(self, loc):
+            return geopy.distance.vincenty(self.location, loc).meters
+
+    def __init__(self):
+        self.location = [0, 0]
+        self.levels = [1, 2, 3]
+
+
 def cancelmoose():
     global events
     global conf
@@ -91,7 +110,7 @@ def cancelmoose():
                 except:
                     pass
                 if conf["debug"]:
-                    print("Event of level "+i.level+" from user ID "+i.uuid+" with ID "+i.euid.+" is canceled due to timeout")
+                    print("Event of level "+i.level+" from user ID "+i.uuid+" with ID "+i.euid+" is canceled due to timeout")
                 events.remove(i)
             if i in to_cancel:
                 to_cancel.remove(i)
@@ -102,23 +121,24 @@ cancelmoose_thread = threading.Thread(target=cancelmoose, name="cancelmoose")
 cancelmoose_thread.daemon = True
 cancelmoose_thread.start()
 
+
 def parser(client, userdata, msg):
     global log
     global messages
     global events
     global to_cancel
     messages += 1
-    log = log+[{"topic":msg.topic, "payload":msg.payload}]
+    log = log+[{"topic": msg.topic, "payload": msg.payload}]
     if messages == conf["limit_to_save"]+1:
         messages = 0
-        json.dump({"log":log}, open(conf["path_to_log"],"w"))
-        json.dump({"events":events}, open(conf["path_to_event_list"],"w"))
+        json.dump({"log": log}, open(conf["path_to_log"], "w"))
+        json.dump({"events": events}, open(conf["path_to_event_list"], "w"))
     if msg.topic == conf["data_chan"]:
         open(conf["path_to_data_folder"]+msg.payload.partition(
-            "::")[0],"w").write(msg.payload.partition("::")[2])
+            "::")[0], "w").write(msg.payload.partition("::")[2])
     elif msg.topic == conf["event_chan"]:
         message = json.loads(msg.payload)
-        message.update({"timestamp":time.time()})
+        message.update({"timestamp": time.time()})
         message = Event(message)
         if conf["debug"]:
             print("Recieved event of level "+message.level+" from user ID "+message.uuid+", which was assigned ID "+message.euid)
