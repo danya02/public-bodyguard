@@ -47,12 +47,18 @@ class Event:
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
         if name == "long":
-            object.__setattr__(self, "location", [self.location[0], value])
+            object.__setattr__(self, "location", [self.location[0], value, self.location[2], self.location[3]])
         elif name == "lat":
-            object.__setattr__(self, "location", [value, self.location[1]])
+            object.__setattr__(self, "location", [value, self.location[1], self.location[2], self.location[3]])
+        elif name == "alt":
+            object.__setattr__(self, "location", [self.location[0], self.location[1], value, self.location[3]])
+        elif name == "acc":
+            object.__setattr__(self, "location", [self.location[0], self.location[1], self.location[2], value])
         elif name == "location":
             object.__setattr__(self, "lat", value[0])
             object.__setattr__(self, "long", value[1])
+            object.__setattr__(self, "alt", value[2])
+            object.__setattr__(self, "acc", value[3])
 
     def import_dict(self, dic):
         for i in ("euid", "uuid", "timestamp", "level", "location"):
@@ -141,7 +147,7 @@ def parser(client, userdata, msg):
         message.update({"timestamp": time.time()})
         message = Event(message)
         if conf["debug"]:
-            print("Recieved event of level "+message.level+" from user ID "+message.uuid+", which was assigned ID "+message.euid)
+            print("Recieved event of level "+message.level+" from user ID "+message.uuid+" from "+str(message.location)+" of level "+str(message.level)+", which was assigned ID "+message.euid)
         events = events+[message]
     elif msg.topic == conf["cancel_chan"]:
         for i in events:

@@ -121,5 +121,5 @@ def press():
 
 def send_event(level):
     global uid
-    event = {"uuid": uid, "euid": uuid.uuid1(), "level": level, "location": [gpspoll.fix.latitude, gpspoll.fix.longitude]}
+    event = {"uuid": uid, "euid": uuid.uuid1(), "level": level, "location": [gpspoll.fix.latitude, gpspoll.fix.longitude, gpspoll.fix.alltitude, gpspoll.fix.accuracy]}
     m.publish(json.load(open("config.json"))["event_chan"], json.dumps(event))
