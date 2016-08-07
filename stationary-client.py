@@ -20,6 +20,7 @@ import subprocess
 import requests
 import json
 import uuid
+import os
 import geopy
 import geopy.distance
 from gpiozero import Button
@@ -59,15 +60,15 @@ class MapGenerator:
 
 
 class PicDisplayer:
-    def __init__(self, pic):
-        self.viewer = subprocess.Popen(["sudo", "fbi", pic, "-a"])
+    def __init__(self, pic, fb="/dev/fb0"):
+        self.viewer = subprocess.Popen(["sudo", "fbi", str(pic), "-a", "-d", str(fb)])
         self.alive = True
 
-        def stop(self):
-            if not self.alive:
-                raise RuntimeError("Attempted to stop a stopped client")
-            self.viewer.terminate()
-            self.alive = False
+    def stop(self):
+        if not self.alive:
+            raise RuntimeError("Attempted to stop a stopped client")
+        os.popen("killall fbi").read()
+        self.alive = False
 m.subscribe("/user/events")
 m.subscribe("/user/cancel")
 
@@ -81,7 +82,11 @@ def parser(client, userdata, message):
     global p
     if message.topic == "/user/cancel":
         payload = message.payload
-        if payload.split("@")[0] == p.uuid and payload.split("@")[1].split("::")[0] == p.euid:
+        payload = str(payload)
+        p.uuid = str(p.uuid)
+        p.euid = str(p.euid)
+        print(payload)
+        if str(payload.split("::")[0]) == str(p.uuid) and str(payload.split("::")[1]) == str(p.euid):
             try:
                 p.stop()
                 # magic.gpio.display("Event resolved")
@@ -90,14 +95,15 @@ def parser(client, userdata, message):
                 p = None
             except:
                 pass
-    elif message.topic == "/user/evets":
+    elif message.topic == "/user/events":
         payload = json.loads(message.payload)
         if not distance([self_lat, self_long], payload["location"]) > conf["l"+str(payload["level"])]:
-            p = PicDisplayer(MapGenerator([{"lat": self_lat, "long": self_long, "style": "round", "size": "", "content": ""},
-                                           {"lat": payload["location"][0], "long": payload["location"][1], "style": "pm2", "size": "l", "content":""}],
-                                          {"lang": "ru_RU", "width": 320, "height": 240, "type": "map"}))
-        p.euid = payload["euid"]
-        p.uuid = payload["uuid"]
+            m = MapGenerator([{"lat": self_lat, "long": self_long, "style": "round", "color": "", "size": "", "content": ""},
+                              {"lat": payload["location"][0], "long": payload["location"][1], "color": "rd", "style": "pm2", "size": "l", "content":""}],
+                             {"lang": "ru_RU", "width": 320, "height": 240, "type": "map"}).get_file()
+            p = PicDisplayer(m)
+            p.euid = payload["euid"]
+            p.uuid = payload["uuid"]
         # magic.gpio.display("Event nearby")
         while (not accept.is_pressed) or (not decline.is_pressed):
             pass
@@ -107,3 +113,5 @@ def parser(client, userdata, message):
             client.publish("/user/replies", uid+"@"+payload["euid"]+"::0")
             # magic.gpio.display("")
             p.stop()
+m.on_message = parser
+m.loop_forever()

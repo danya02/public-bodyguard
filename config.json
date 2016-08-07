@@ -1,5 +1,5 @@
 {
-  "event_chan": "/user/event",
+  "event_chan": "/user/events",
   "reply_chan": "/user/reply",
   "data_chan": "/user/blobs",
   "cancel_chan": "/user/cancel",

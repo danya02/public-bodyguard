@@ -44,25 +44,15 @@ for i in ("data_chan", "event_chan", "reply_chan", "cancel_chan"):
 
 class Event:
     """This class defines an Event."""
-    def __setattr__(self, name, value):
-        object.__setattr__(self, name, value)
-        if name == "long":
-            object.__setattr__(self, "location", [self.location[0], value, self.location[2], self.location[3]])
-        elif name == "lat":
-            object.__setattr__(self, "location", [value, self.location[1], self.location[2], self.location[3]])
-        elif name == "alt":
-            object.__setattr__(self, "location", [self.location[0], self.location[1], value, self.location[3]])
-        elif name == "acc":
-            object.__setattr__(self, "location", [self.location[0], self.location[1], self.location[2], value])
-        elif name == "location":
-            object.__setattr__(self, "lat", value[0])
-            object.__setattr__(self, "long", value[1])
-            object.__setattr__(self, "alt", value[2])
-            object.__setattr__(self, "acc", value[3])
+    def __getitem__(self, item):
+        return None
 
     def import_dict(self, dic):
-        for i in ("euid", "uuid", "timestamp", "level", "location"):
-            self.__setattr__(i, dic[i])
+        self.euid = str(dic["euid"])
+        self.uuid = str(dic["uuid"])
+        self.timestamp = dic["timestamp"]
+        self.level = dic["level"]
+        self.location = dic["location"]
 
     def export_dict(self):
         dic = dict()
@@ -71,10 +61,6 @@ class Event:
         return dic
 
     def __init__(self, dic=None):
-        self.level = 0
-        self.location = [0, 0]
-        self.lat = 0
-        self.long = 0
         self.timestamp = 0
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.euid = self.uuid
@@ -108,6 +94,7 @@ def cancelmoose():
     global events
     global conf
     global to_cancel
+    to_cancel = []
     while 1:
         for i in events:
             if i.timestamp+conf["time_to_cancel"]["l"+str(i.level)] < time.time():
@@ -116,13 +103,15 @@ def cancelmoose():
                 except:
                     pass
                 if conf["debug"]:
-                    print("Event of level "+i.level+" from user ID "+i.uuid+" with ID "+i.euid+" is canceled due to timeout")
+                    print("Event of level "+str(i.level)+" from user ID "+i.uuid+" with ID "+i.euid+" is canceled due to timeout")
                 events.remove(i)
             if i in to_cancel:
                 to_cancel.remove(i)
                 if conf["debug"]:
-                    print("Event of level "+i.level+" from user ID "+i.uuid+" with ID "+i.euid+" is canceled because of request")
+                    print("Event of level "+str(i.level)+" from user ID "+i.uuid+" with ID "+i.euid+" is canceled because of request")
                 events.remove(i)
+        time.sleep(5)
+
 cancelmoose_thread = threading.Thread(target=cancelmoose, name="cancelmoose")
 cancelmoose_thread.daemon = True
 cancelmoose_thread.start()
@@ -147,10 +136,11 @@ def parser(client, userdata, msg):
         message.update({"timestamp": time.time()})
         message = Event(message)
         if conf["debug"]:
-            print("Recieved event of level "+message.level+" from user ID "+message.uuid+" from "+str(message.location)+" of level "+str(message.level)+", which was assigned ID "+message.euid)
+            print("Recieved event of level "+str(message.level)+" from user ID "+message.uuid+" at "+str(message.location)+", which was assigned ID "+message.euid)
         events = events+[message]
     elif msg.topic == conf["cancel_chan"]:
         for i in events:
-            if msg.payload.split("::")[0] == i["uuid"] and msg.payload.split("::")[1] == i["euid"]:
-                to_cancel = to_cancel+[i]
+            if msg.payload.split("::")[0] == i.uuid and msg.payload.split("::")[1] == i.euid:
+                to_cancel.extend([i])
 m.on_message = parser
+m.loop_forever()
