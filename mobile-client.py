@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-#    client.py - Event creator and sender
+#    mobile-client.py - Event creator and sender
 #    Copyright (C) 2016 Danya Generalov
 
 #    This program is free software: you can redistribute it and/or modify
