@@ -25,8 +25,6 @@ import paho.mqtt.client as mqtt
 import uuid
 import json
 ADDRESS = "127.0.0.1"
-self_lat = 55.806162385322
-self_long = 37.542187524385
 INITPLACE = [55.806162385322, 37.542187524385, 500, 10]
 global uid
 try:
@@ -94,7 +92,7 @@ try:
     gpspoll = GpsPoller()
 except:
     print("-----WARNING-----\nNo GPS module detected.\nThis program will work in simulation mode.")
-    gpspoll = FakeGpsPoller()
+    gpspoll = FakeGpsPoller(INITPLACE)
 m.connect(ADDRESS)
 global presses
 global timed
