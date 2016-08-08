@@ -25,6 +25,9 @@ import paho.mqtt.client as mqtt
 import uuid
 import json
 ADDRESS = "127.0.0.1"
+self_lat = 55.806162385322
+self_long = 37.542187524385
+INITPLACE = [55.806162385322, 37.542187524385, 500, 10]
 global uid
 try:
     uid = open("uuid.txt").read()
@@ -72,6 +75,10 @@ class FakeGpsPoller:
             self.fix.longitude -= offseth
             self.fix.altitude += offsetv
             self.accuracy += offseta
+            if self.accuracy < 0:
+                self.accuracy = 10
+            if self.altitude < 0:
+                self.altitude = 10
 
     def __init__(self, loc):
         self.fix = Void()
