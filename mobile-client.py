@@ -111,7 +111,7 @@ def press():
     global presses
     global timed
     if not timed:
-        threading.Thread(target=timer).start()
+          threading.Thread(target=timer).start()
     presses += 1
 btn.when_pressed = press
 
