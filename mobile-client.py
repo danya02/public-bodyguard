@@ -19,6 +19,7 @@
 import threading
 import time
 import gps
+import gpiozero
 import paho.mqtt.client as mqtt
 import uuid
 import json
@@ -49,47 +50,11 @@ class GpsPoller(threading.Thread):
             pass
 
 
-class Button:
-        def __init__(self, pin, notgnd):
-                import RPi.GPIO
-                import threading
-                self._gpio = RPi.GPIO
-                self._pin_ = pin
-                self._gpio.setmode(self._gpio.BOARD)
-                self._gpio.setwarnings(False)
-                self.callback_true = None
-                self.callback_false = None
-                self._gpio.setup(self._pin_, self._gpio.IN, (self._gpio.PUD_UP
-                                                             if not notgnd else
-                                                             self._gpio.PUD_DOWN
-                                                             ))
-                self.__thread = threading.Thread(target=self.polling)
-                self.__thread.start()
-
-        def state(self):
-                self._gpio.setmode(self._gpio.BOARD)
-                self._gpio.setwarnings(False)
-                self._gpio.setup(self._pin_, self._gpio.IN, self._gpio.PUD_UP)
-                return self._gpio.input(self._pin_)
-
-        def wait_for(self, which):
-                self._gpio.wait_for_edge(self._pin_, which)
-
-        def polling(self):
-            while 1:
-                self.wait_for(True)
-                if not isinstance(self.callback_true, None):
-                    self.callback_true()
-                self.wait_for(False)
-                if not isinstance(self.callback_false, None):
-                    self.callback_false()
-btn = Button(7, False)
+btn = gpiozero.Button(7, False)
 m = mqtt.Client()
 gpspoll = GpsPoller()
 m.connect(ADDRESS)
-global last_time
 global presses
-global level
 global timed
 timed = False
 level = 0
@@ -98,28 +63,27 @@ last_time = 0
 
 
 def timer():
-    global last_time
-    global level
+    global presses
     global timed
     timed = True
-    while not last_time+5 < time.time():
-        pass
+    time.sleep(5)
     level = presses
     timed = False
     send_event(level)
 
 
 def press():
-    global last_time
     global presses
     global timed
     if not timed:
         threading.Thread(target=timer).start()
     presses += 1
-    last_time = time.time()
+btn.when_pressed = press
 
 
 def send_event(level):
     global uid
     event = {"uuid": uid, "euid": uuid.uuid1(), "level": level, "location": [gpspoll.fix.latitude, gpspoll.fix.longitude, gpspoll.fix.alltitude, gpspoll.fix.accuracy]}
-    m.publish(json.load(open("config.json"))["event_chan"], json.dumps(event))
+    m.publish(json.load(open("config.json"))["event_chan"], json.dumps(event), int(json.load(open("config.json"))["qos_level"]))
+while 1:
+    pass
