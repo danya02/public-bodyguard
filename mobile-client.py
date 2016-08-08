@@ -18,6 +18,7 @@
 
 import threading
 import time
+import random
 import gps
 import gpiozero
 import paho.mqtt.client as mqtt
@@ -50,9 +51,43 @@ class GpsPoller(threading.Thread):
             pass
 
 
+class Void:
+    pass
+
+
+class FakeGpsPoller:
+    def wander(self):
+        while 1:
+            time.sleep(random.random())
+            offseth = random.randint(1, 20) * 0.01
+            offsetv = random.randint(1, 4) * 0.5
+            offseta = random.randint(1, 2) * 5
+            if random.randint(0,1):
+                offseth = offseth * -1
+            if random.randint(0,1):
+                offsetv = offsetv * -1
+            if random.randint(0,1):
+                offseth = offseth * -1
+            self.fix.latitude += offseth
+            self.fix.longitude -= offseth
+            self.fix.altitude += offsetv
+            self.accuracy += offseta
+
+    def __init__(self, loc):
+        self.fix = Void()
+        self.fix.latitude = loc[0]
+        self.fix.longitude = loc[1]
+        self.fix.altitude = loc[2]
+        self.fix.accuracy = loc[3]
+        self.thread = threading.Thread(target=self.wander)
+        self.thread.start()
 btn = gpiozero.Button(7, False)
 m = mqtt.Client()
-gpspoll = GpsPoller()
+try:
+    gpspoll = GpsPoller()
+except:
+    print("-----WARNING-----\nNo GPS module detected.\nThis program will work in simulation mode.")
+    gpspoll = FakeGpsPoller()
 m.connect(ADDRESS)
 global presses
 global timed
