@@ -73,10 +73,10 @@ class FakeGpsPoller:
             self.fix.longitude -= offseth
             self.fix.altitude += offsetv
             self.accuracy += offseta
-            if self.accuracy < 0:
-                self.accuracy = 10
-            if self.altitude < 0:
-                self.altitude = 10
+            if self.fix.accuracy < 0:
+                self.fix.accuracy = 10
+            if self.fix.altitude < 0:
+                self.fix.altitude = 10
 
     def __init__(self, loc):
         self.fix = Void()
