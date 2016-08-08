@@ -62,11 +62,11 @@ class FakeGpsPoller:
             offseth = random.randint(1, 20) * 0.01
             offsetv = random.randint(1, 4) * 0.5
             offseta = random.randint(1, 2) * 5
-            if random.randint(0,1):
+            if random.randint(0, 1):
                 offseth = offseth * -1
-            if random.randint(0,1):
+            if random.randint(0, 1):
                 offsetv = offsetv * -1
-            if random.randint(0,1):
+            if random.randint(0, 1):
                 offseth = offseth * -1
             self.fix.latitude += offseth
             self.fix.longitude -= offseth
@@ -111,7 +111,7 @@ def press():
     global presses
     global timed
     if not timed:
-          threading.Thread(target=timer).start()
+        threading.Thread(target=timer).start()
     presses += 1
 btn.when_pressed = press
 
