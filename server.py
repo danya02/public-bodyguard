@@ -20,6 +20,7 @@ import json
 import time
 import threading
 import geopy
+import uuid
 import geopy.distance
 global to_cancel
 to_cancel = []
@@ -88,6 +89,13 @@ class EventHandler:
     def __init__(self):
         self.location = [0, 0]
         self.levels = [1, 2, 3]
+        self.uuid = "00000000-0000-0000-0000-000000000000"
+        self.name = ""
+
+    def save(self):
+        output = {"location": self.location, "levels": self.level,
+                  "uuid": self.uuid, "name": self.name}
+        json.dump(output, open("./event_handlers/"+uuid.uuid3(uuid.UUID("00000000-0000-0000-0000-000000000000"), self.name), "w"))
 
 
 def cancelmoose():
