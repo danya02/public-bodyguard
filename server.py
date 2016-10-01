@@ -74,7 +74,7 @@ class Event:
     def save(self):
         output = {"timestamp": self.timestamp,
                   "uuid": self.uuid, "euid": self.euid}
-        json.dump(output, open("./events/"+self.uuid), "w")
+        json.dump(output, open("./events/"+self.uuid+".json", "w"))
 
 
 class EventHandler:
@@ -103,7 +103,7 @@ class EventHandler:
     def save(self):
         output = {"location": self.location, "levels": self.level,
                   "uuid": self.uuid, "name": self.name}
-        json.dump(output, open("./event_handlers/"+uuid.uuid3(uuid.UUID("00000000-0000-0000-0000-000000000000"), self.name), "w"))
+        json.dump(output, open("./event_handlers/"+str(uuid.uuid3(uuid.UUID("00000000-0000-0000-0000-000000000000"), self.name))+".json", "w"))
 
 
 def cancelmoose():
