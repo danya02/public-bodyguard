@@ -83,14 +83,17 @@ class EventHandler:
             object.__setattr__(self, "lat", value[0])
             object.__setattr__(self, "long", value[1])
 
-        def get_distance_to(self, loc):
-            return geopy.distance.vincenty(self.location, loc).meters
+    def get_distance_to(self, loc):
+        return geopy.distance.vincenty(self.location, loc).meters
 
-    def __init__(self):
+    def __init__(self, json_obj=None):
         self.location = [0, 0]
         self.levels = [1, 2, 3]
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.name = ""
+        if isinstance(json_obj, dict):
+            for i in json_obj:
+                self.__setattr__(i, json_obj[i])
 
     def save(self):
         output = {"location": self.location, "levels": self.level,
