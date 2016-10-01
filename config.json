@@ -8,10 +8,12 @@
   "path_to_log": "./log.json",
   "limit_to_save": 16,
   "debug": true,
-  "path_to_event_list": "./events.json",
+  "path_to_event_dir": "./events/",
+  "path_to_event_handlers_dir": "./event_handlers/",
   "time_to_cancel":{
     "l3": 300,
     "l2": 600,
     "l1": 1500
   }
 }
+ 

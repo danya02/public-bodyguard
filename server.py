@@ -18,6 +18,7 @@
 import paho.mqtt.client as mqtt
 import json
 import time
+import os
 import threading
 import geopy
 import uuid
@@ -25,11 +26,6 @@ import geopy.distance
 global to_cancel
 to_cancel = []
 conf = json.load(open("./config.json"))
-global events
-try:
-    events = json.load(open(conf["path_to_event_list"]))["events"]
-except:
-    events = []
 global log
 try:
     log = json.load(open(conf["path_to_log"]))["log"]
@@ -72,9 +68,17 @@ class Event:
                 self.import_dict(dic)
 
     def save(self):
+        global conf
         output = {"timestamp": self.timestamp,
                   "uuid": self.uuid, "euid": self.euid}
-        json.dump(output, open("./events/"+self.uuid+".json", "w"))
+        json.dump(output, open(
+            conf["path_to_event_dir"]+self.uuid+".json", "w"))
+
+global events
+events = []
+for i in os.listdir(conf["path_to_event_dir"]):
+    try:
+        events += [Event(i)]
 
 
 class EventHandler:
@@ -101,9 +105,18 @@ class EventHandler:
                 self.__setattr__(i, json_obj[i])
 
     def save(self):
+        global conf
         output = {"location": self.location, "levels": self.level,
                   "uuid": self.uuid, "name": self.name}
-        json.dump(output, open("./event_handlers/"+str(uuid.uuid3(uuid.UUID("00000000-0000-0000-0000-000000000000"), self.name))+".json", "w"))
+        json.dump(output, open(conf["path_to_event_handlers_dir"] + str(
+            uuid.uuid3(uuid.UUID("00000000-0000-0000-0000-000000000000"),
+                       self.name))+".json", "w"))
+
+global event_handlers
+event_handlers = []
+for i in os.listdir(conf["path_to_event_handlers_dir"]):
+    try:
+        event_handlers += [EventHandler(i)]
 
 
 def cancelmoose():
@@ -131,6 +144,21 @@ def cancelmoose():
 cancelmoose_thread = threading.Thread(target=cancelmoose, name="cancelmoose")
 cancelmoose_thread.daemon = True
 cancelmoose_thread.start()
+
+
+def saver():
+    global events
+    global event_handlers
+    while 1:
+        for i in events:
+            i.save()
+        for i in event_handlers:
+            i.save()
+        time.sleep(5)
+
+saver_thread = threading.Thread(target=saver, name="saver")
+saver_thread.daemon = True
+saver_thread.start()
 
 
 def parser(client, userdata, msg):
