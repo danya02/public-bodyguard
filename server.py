@@ -71,6 +71,11 @@ class Event:
             else:
                 self.import_dict(dic)
 
+    def save(self):
+        output = {"timestamp": self.timestamp,
+                  "uuid": self.uuid, "euid": self.euid}
+        json.dump(output, open("./events/"+self.uuid), "w")
+
 
 class EventHandler:
     def __setattr__(self, name, value):
