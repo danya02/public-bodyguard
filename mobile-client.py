@@ -19,7 +19,8 @@
 import threading
 import time
 import random
-import gps
+import gpsd
+import os
 import gpiozero
 import paho.mqtt.client as mqtt
 import uuid
@@ -34,26 +35,33 @@ except:
     open("uuid.txt", "w").write(uid)
 
 
+class Void:
+    pass
+
+
 class GpsPoller(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        self.session = gps.gps(mode=gps.WATCH_ENABLE)
-        self.current_value = None
-
-    def get_current_value(self):
-        return self.current_value
+        try:
+            gpsd.connect(ADDRESS)
+        except:
+            os.popen("sudo gpsd /dev/ttyUSB0")
+            time.sleep(2)
+            gpsd.connect(ADDRESS)
 
     def run(self):
-        try:
-            while True:
-                self.current_value = self.session.next()
-                time.sleep(0.2)
-        except StopIteration:
-            pass
-
-
-class Void:
-    pass
+        while 1:
+            try:
+                self.fix = Void()
+                data = gpsd.get_current()
+                self.fix.latitude = data.lat
+                self.fix.longitude = data.lon
+                self.fix.altitude = data.alt
+                self.fix.latitude = data.lat
+                self.accuracy = data.position_precision()[0]
+                time.sleep(1)
+            except:
+                pass
 
 
 class FakeGpsPoller:
