@@ -42,12 +42,13 @@ class Void:
 class GpsPoller(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
+        self.daemon = True
         try:
-            gpsd.connect(ADDRESS)
+            gpsd.connect()
         except:
             os.popen("sudo gpsd /dev/ttyUSB0")
             time.sleep(2)
-            gpsd.connect(ADDRESS)
+            gpsd.connect()
 
     def run(self):
         while 1:
@@ -64,8 +65,8 @@ class GpsPoller(threading.Thread):
                 pass
 
 
-class FakeGpsPoller:
-    def wander(self):
+class FakeGpsPoller(threading.Thread):
+    def run(self):
         while 1:
             time.sleep(random.random())
             offseth = random.randint(1, 20) * 0.01
@@ -87,13 +88,13 @@ class FakeGpsPoller:
                 self.fix.altitude = 10
 
     def __init__(self, loc):
+        threading.Thread.__init__(self)
+        self.daemon = True
         self.fix = Void()
         self.fix.latitude = loc[0]
         self.fix.longitude = loc[1]
         self.fix.altitude = loc[2]
         self.fix.accuracy = loc[3]
-        self.thread = threading.Thread(target=self.wander)
-        self.thread.start()
 btn = gpiozero.Button(7, False)
 m = mqtt.Client()
 try:
@@ -101,6 +102,7 @@ try:
 except:
     print("-----WARNING-----\nNo GPS module detected.\nThis program will work in simulation mode.")
     gpspoll = FakeGpsPoller(INITPLACE)
+gpspoll.start()
 m.connect(ADDRESS)
 global presses
 global timed
