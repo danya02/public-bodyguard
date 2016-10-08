@@ -42,19 +42,25 @@ decline = Button(21)
 class MapGenerator:
     def __init__(self, pt, meta):
         if not isinstance(pt, list):
-            raise TypeError("Expected <type 'list'>, got "+str(type(pt))+" instead")
+            raise TypeError("Expected <type 'list'>, got " + str(type(pt)) +
+                            " instead")
         if not isinstance(meta, dict):
-            raise TypeError("Expected <type 'dict'>, got "+str(type(meta))+" instead")
+            raise TypeError("Expected <type 'dict'>, got " + str(type(meta)) +
+                            " instead")
         self.points = pt
         self.meta = meta
 
     def get_file(self):
         addr = "http://static-maps.yandex.ru/1.x/?"
-        addr = addr+"l="+str(self.meta["type"])+"&size="+str(self.meta["width"])+","+str(self.meta["height"])+"&lang="+str(self.meta["lang"])+"&pt="
+        addr += "l=" + str(self.meta["type"]) + "&size="
+        addr += str(self.meta["width"]) + "," + str(self.meta["height"])
+        addr += "&lang=" + str(self.meta["lang"]) + "&pt="
         for i, j in zip(self.points, range(len(self.points)+1)[1:]):
-            addr = addr+str(i["lat"])+","+str(i["long"])+","+str(i["style"])+str(i["color"])+str(i["size"])+str(i["content"])
+            addr += str(i["lat"]) + ","+str(i["long"]) + ","
+            addr += str(i["style"]) + str(i["color"]) + str(i["size"])
+            addr += str(i["content"])
             if not j == len(self.points):
-                addr = addr+"~"
+                addr = addr + "~"
         open("/tmp/img.png", "wb").write(requests.get(addr).content)
         return "/tmp/img.png"
 
@@ -64,7 +70,8 @@ class MapGenerator:
 
 class PicDisplayer:
     def __init__(self, pic, fb="/dev/fb0"):
-        self.viewer = subprocess.Popen(["sudo", "fbi", str(pic), "-a", "-d", str(fb), "-noverbose"])
+        self.viewer = subprocess.Popen(["sudo", "fbi", str(pic), "-a", "-d",
+                                        str(fb), "-noverbose"])
         self.alive = True
 
     def stop(self):
@@ -89,7 +96,8 @@ def parser(client, userdata, message):
         p.uuid = str(p.uuid)
         p.euid = str(p.euid)
         print(payload)
-        if str(payload.split("::")[0]) == str(p.uuid) and str(payload.split("::")[1]) == str(p.euid):
+        if str(payload.split("::")[0]) == str(p.uuid) and str(payload.split(
+          "::")[1]) == str(p.euid):
             try:
                 p.stop()
                 # magic.gpio.display("Event resolved")
@@ -100,10 +108,17 @@ def parser(client, userdata, message):
                 pass
     elif message.topic == "/user/events":
         payload = json.loads(message.payload)
-        if not distance([self_lat, self_long], payload["location"]) > conf["l"+str(payload["level"])]:
-            m = MapGenerator([{"lat": self_lat, "long": self_long, "style": "round", "color": "", "size": "", "content": ""},
-                              {"lat": payload["location"][0], "long": payload["location"][1], "color": "rd", "style": "pm2", "size": "l", "content":""}],
-                             {"lang": "ru_RU", "width": 320, "height": 240, "type": "map"}).get_file()
+        if not distance([self_lat, self_long],
+                        payload["location"]) > conf["l" +
+                                                    str(payload["level"])]:
+            m = MapGenerator([{"lat": self_lat, "long": self_long,
+                               "style": "round", "color": "", "size": "",
+                               "content": ""}, {"lat": payload["location"][0],
+                                                "long": payload["location"][1],
+                                                "color": "rd", "style": "pm2",
+                                                "size": "l", "content":""}],
+                             {"lang": "ru_RU", "width": 320, "height": 240,
+                              "type": "map"}).get_file()
             p = PicDisplayer(m)
             p.euid = payload["euid"]
             p.uuid = payload["uuid"]

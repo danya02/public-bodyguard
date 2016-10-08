@@ -63,7 +63,8 @@ class Event:
         self.euid = self.uuid
         if dic is not None:
             if not isinstance(dic, dict):
-                raise TypeError("Expected type dict, but got "+str(type(dic))+" instead")
+                raise TypeError("Expected type dict, but got " +
+                                str(type(dic)) + " instead")
             else:
                 self.import_dict(dic)
 
@@ -72,7 +73,7 @@ class Event:
         output = {"timestamp": self.timestamp,
                   "uuid": self.uuid, "euid": self.euid}
         json.dump(output, open(
-            conf["path_to_event_dir"]+self.uuid+".json", "w"))
+            conf["path_to_event_dir"] + self.uuid + ".json", "w"))
 
 global events
 events = []
@@ -110,7 +111,7 @@ class EventHandler:
                   "uuid": self.uuid, "name": self.name}
         json.dump(output, open(conf["path_to_event_handlers_dir"] + str(
             uuid.uuid3(uuid.UUID("00000000-0000-0000-0000-000000000000"),
-                       self.name))+".json", "w"))
+                       self.name)) + ".json", "w"))
 
 global event_handlers
 event_handlers = []
@@ -126,18 +127,23 @@ def cancelmoose():
     to_cancel = []
     while 1:
         for i in events:
-            if i.timestamp+conf["time_to_cancel"]["l"+str(i.level)] < time.time():
+            if i.timestamp + \
+              conf["time_to_cancel"]["l" + str(i.level)] < time.time():
                 try:
                     to_cancel.remove(i)
                 except:
                     pass
                 if conf["debug"]:
-                    print("Event of level "+str(i.level)+" from user ID "+i.uuid+" with ID "+i.euid+" is canceled due to timeout")
+                    print("Event of level", str(i.level), "from user ID",
+                          i.uuid, "with ID", i.euid,
+                          "is canceled due to timeout")
                 events.remove(i)
             if i in to_cancel:
                 to_cancel.remove(i)
                 if conf["debug"]:
-                    print("Event of level "+str(i.level)+" from user ID "+i.uuid+" with ID "+i.euid+" is canceled because of request")
+                    print("Event of level", str(i.level), "from user ID",
+                          i.uuid, "with ID", i.euid,
+                          "is canceled because of request")
                 events.remove(i)
         time.sleep(5)
 
@@ -167,24 +173,28 @@ def parser(client, userdata, msg):
     global events
     global to_cancel
     messages += 1
-    log = log+[{"topic": msg.topic, "payload": msg.payload}]
-    if messages == conf["limit_to_save"]+1:
+    log += [{"topic": msg.topic, "payload": msg.payload}]
+    if messages == conf["limit_to_save"] + 1:
         messages = 0
         json.dump({"log": log}, open(conf["path_to_log"], "w"))
         json.dump({"events": events}, open(conf["path_to_event_list"], "w"))
     if msg.topic == conf["data_chan"]:
-        open(conf["path_to_data_folder"]+msg.payload.partition(
+        open(conf["path_to_data_folder"] + msg.payload.partition(
             "::")[0], "w").write(msg.payload.partition("::")[2])
     elif msg.topic == conf["event_chan"]:
         message = json.loads(msg.payload)
         message.update({"timestamp": time.time()})
         message = Event(message)
         if conf["debug"]:
-            print("Recieved event of level "+str(message.level)+" from user ID "+message.uuid+" at "+str(message.location)+", which was assigned ID "+message.euid)
-        events = events+[message]
+            print("Recieved event of level", str(message.level),
+                  "from user ID", message.uuid, "at ",
+                  str(message.location) + ", which was assigned ID",
+                  message.euid)
+        events += [message]
     elif msg.topic == conf["cancel_chan"]:
         for i in events:
-            if msg.payload.split("::")[0] == i.uuid and msg.payload.split("::")[1] == i.euid:
+            if msg.payload.split("::")[0] == i.uuid and \
+               msg.payload.split("::")[1] == i.euid:
                 to_cancel.extend([i])
 m.on_message = parser
 m.loop_forever()

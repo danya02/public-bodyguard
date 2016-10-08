@@ -100,7 +100,8 @@ m = mqtt.Client()
 try:
     gpspoll = GpsPoller()
 except:
-    print("-----WARNING-----\nNo GPS module detected.\nThis program will work in simulation mode.")
+    print("-----WARNING-----", "No GPS module detected.",
+          "This program will work in simulation mode.", sep="\n")
     gpspoll = FakeGpsPoller(INITPLACE)
 gpspoll.start()
 m.connect(ADDRESS)
@@ -133,7 +134,10 @@ btn.when_pressed = press
 
 def send_event(level):
     global uid
-    event = {"uuid": uid, "euid": uuid.uuid1(), "level": level, "location": [gpspoll.fix.latitude, gpspoll.fix.longitude, gpspoll.fix.altitude, gpspoll.fix.accuracy]}
-    m.publish(json.load(open("config.json"))["event_chan"], json.dumps(event), int(json.load(open("config.json"))["qos_level"]))
+    event = {"uuid": uid, "euid": uuid.uuid1(), "level": level, "location":
+             [gpspoll.fix.latitude, gpspoll.fix.longitude,
+              gpspoll.fix.altitude, gpspoll.fix.accuracy]}
+    m.publish(json.load(open("config.json"))["event_chan"], json.dumps(event),
+              int(json.load(open("config.json"))["qos_level"]))
 while 1:
     pass
