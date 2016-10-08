@@ -58,10 +58,13 @@ class MapGenerator:
         open("/tmp/img.png", "wb").write(requests.get(addr).content)
         return "/tmp/img.png"
 
+    def __str__(self):
+        return self.get_file()
+
 
 class PicDisplayer:
     def __init__(self, pic, fb="/dev/fb0"):
-        self.viewer = subprocess.Popen(["sudo", "fbi", str(pic), "-a", "-d", str(fb)])
+        self.viewer = subprocess.Popen(["sudo", "fbi", str(pic), "-a", "-d", str(fb), "-noverbose"])
         self.alive = True
 
     def stop(self):
