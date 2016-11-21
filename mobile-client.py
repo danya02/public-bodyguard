@@ -155,9 +155,9 @@ btn.when_pressed = press
 
 def send_event(level):
     global uid
-    event = {"uuid": uid, "euid": uuid.uuid1(), "level": level, "location":
-             [gpspoll.latitude, gpspoll.longitude, gpspoll.altitude,
-              gpspoll.accuracy]}
+    event = {"uuid": uid, "euid": str(uuid.uuid1()), "level": level,
+             "location": [gpspoll.latitude, gpspoll.longitude,
+                          gpspoll.altitude, gpspoll.accuracy]}
     m.publish(json.load(open("config.json"))["event_chan"], json.dumps(event),
               int(json.load(open("config.json"))["qos_level"]))
 while 1:
