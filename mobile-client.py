@@ -58,13 +58,13 @@ class GpsPoller(threading.Thread):
     def run(self):
         while 1:
             try:
-                self.fix = Void()
+
                 data = gpsd.get_current()
-                self.fix.latitude = data.lat
-                self.fix.longitude = data.lon
-                self.fix.altitude = data.alt
-                self.fix.latitude = data.lat
-                self.fix.accuracy = data.position_precision()[0]
+                self.latitude = data.lat
+                self.longitude = data.lon
+                self.altitude = data.alt
+                self.latitude = data.lat
+                self.accuracy = data.position_precision()[0]
                 time.sleep(1)
             except:
                 pass
@@ -83,23 +83,23 @@ class FakeGpsPoller(threading.Thread):
                 offsetv = offsetv * -1
             if random.randint(0, 1):
                 offseta = offseta * -1
-            self.fix.latitude += offseth
-            self.fix.longitude -= offseth
-            self.fix.altitude += offsetv
-            self.fix.accuracy += offseta
-            if self.fix.accuracy < 0:
-                self.fix.accuracy = 10
-            if self.fix.altitude < 0:
-                self.fix.altitude = 10
+            self.latitude += offseth
+            self.longitude -= offseth
+            self.altitude += offsetv
+            self.accuracy += offseta
+            if self.accuracy < 0:
+                self.accuracy = 10
+            if self.altitude < 0:
+                self.altitude = 10
 
     def __init__(self, loc):
         threading.Thread.__init__(self)
         self.daemon = True
-        self.fix = Void()
-        self.fix.latitude = loc[0]
-        self.fix.longitude = loc[1]
-        self.fix.altitude = loc[2]
-        self.fix.accuracy = loc[3]
+
+        self.latitude = loc[0]
+        self.longitude = loc[1]
+        self.altitude = loc[2]
+        self.accuracy = loc[3]
 
 
 class FakeButton(threading.Thread):
@@ -156,8 +156,8 @@ btn.when_pressed = press
 def send_event(level):
     global uid
     event = {"uuid": uid, "euid": uuid.uuid1(), "level": level, "location":
-             [gpspoll.fix.latitude, gpspoll.fix.longitude,
-              gpspoll.fix.altitude, gpspoll.fix.accuracy]}
+             [gpspoll.latitude, gpspoll.longitude, gpspoll.altitude,
+              gpspoll.accuracy]}
     m.publish(json.load(open("config.json"))["event_chan"], json.dumps(event),
               int(json.load(open("config.json"))["qos_level"]))
 while 1:
