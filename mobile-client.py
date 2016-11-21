@@ -21,10 +21,15 @@ import time
 import random
 import gpsd
 import os
-import gpiozero
 import paho.mqtt.client as mqtt
 import uuid
 import json
+try:
+    import gpiozero
+    IS_A_PI = True
+except:
+    print("gpiozero not installed, defaulting to non-RPi behaviour")
+    IS_A_PI = False
 ADDRESS = "127.0.0.1"
 INITPLACE = [55.806162385322, 37.542187524385, 500, 10]
 global uid
@@ -59,7 +64,7 @@ class GpsPoller(threading.Thread):
                 self.fix.longitude = data.lon
                 self.fix.altitude = data.alt
                 self.fix.latitude = data.lat
-                self.accuracy = data.position_precision()[0]
+                self.fix.accuracy = data.position_precision()[0]
                 time.sleep(1)
             except:
                 pass
@@ -77,11 +82,11 @@ class FakeGpsPoller(threading.Thread):
             if random.randint(0, 1):
                 offsetv = offsetv * -1
             if random.randint(0, 1):
-                offseth = offseth * -1
+                offseta = offseta * -1
             self.fix.latitude += offseth
             self.fix.longitude -= offseth
             self.fix.altitude += offsetv
-            self.accuracy += offseta
+            self.fix.accuracy += offseta
             if self.fix.accuracy < 0:
                 self.fix.accuracy = 10
             if self.fix.altitude < 0:
@@ -95,7 +100,22 @@ class FakeGpsPoller(threading.Thread):
         self.fix.longitude = loc[1]
         self.fix.altitude = loc[2]
         self.fix.accuracy = loc[3]
-btn = gpiozero.Button(7, False)
+
+
+class FakeButton(threading.Thread):
+    def run(self):
+        input()
+        if callable(self.when_pressed):
+            self.when_pressed()
+
+    def __init__(self):
+        self.when_pressed = None
+        self.start()
+
+if IS_A_PI:
+    btn = gpiozero.Button(7, False)
+else:
+    btn = FakeButton()
 m = mqtt.Client()
 try:
     gpspoll = GpsPoller()
