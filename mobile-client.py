@@ -109,6 +109,7 @@ class FakeButton(threading.Thread):
             self.when_pressed()
 
     def __init__(self):
+        threading.Thread.__init__(self)
         self.when_pressed = None
         self.start()
 
