@@ -104,9 +104,10 @@ class FakeGpsPoller(threading.Thread):
 
 class FakeButton(threading.Thread):
     def run(self):
-        input()
-        if callable(self.when_pressed):
-            self.when_pressed()
+        while 1:
+            input()
+            if callable(self.when_pressed):
+                self.when_pressed()
 
     def __init__(self):
         threading.Thread.__init__(self)
@@ -142,6 +143,7 @@ def timer():
     level = presses
     timed = False
     send_event(level)
+    presses = 0
 
 
 def press():
@@ -158,7 +160,7 @@ def send_event(level):
     event = {"uuid": uid, "euid": str(uuid.uuid1()), "level": level,
              "location": [gpspoll.latitude, gpspoll.longitude,
                           gpspoll.altitude, gpspoll.accuracy]}
-    m.publish(json.load(open("config.json"))["event_chan"], json.dumps(event),
-              int(json.load(open("config.json"))["qos_level"]))
+    m.publish(json.load(open("config.json"))["event_chan"],
+              payload=json.dumps(event))
 while 1:
     pass
