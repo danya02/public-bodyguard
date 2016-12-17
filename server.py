@@ -80,6 +80,8 @@ events = []
 for i in os.listdir(conf["path_to_event_dir"]):
     try:
         events += [Event(i)]
+    except:
+        pass
 
 
 class EventHandler:
@@ -118,6 +120,8 @@ event_handlers = []
 for i in os.listdir(conf["path_to_event_handlers_dir"]):
     try:
         event_handlers += [EventHandler(i)]
+    except:
+        pass
 
 
 def cancelmoose():
