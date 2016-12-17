@@ -51,10 +51,13 @@ class GpsPoller(threading.Thread):
         self.daemon = True
         try:
             gpsd.connect()
+            gpsd.get_current()
         except:
+            os.popen("sudo killall gpsd")
             os.popen("sudo gpsd /dev/ttyUSB0")
             time.sleep(2)
             gpsd.connect()
+            gpsd.get_current()
         for i in ["latitude", "longitude", "altitude", "accuracy"]:
             object.__setattr__(self, i, 0)
 
