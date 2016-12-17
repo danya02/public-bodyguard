@@ -35,6 +35,40 @@ global messages
 messages = 0
 m = mqtt.Client()
 m.connect("127.0.0.1")
+
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        global connected
+        connected = True
+
+
+def on_disconnect(client, userdata, rc):
+    if rc:
+        global connected
+        connected = False
+        connect()
+
+
+def connect():
+    global connected
+    global m
+    attempt = 0
+    while not connected:
+        attempt += 1
+        try:
+            m = mqtt.Client()
+            m.on_connect = on_connect
+            m.on_disconnect = on_disconnect
+            m.connect("127.0.0.1")
+            m.loop_start()
+        except:
+            pass
+
+m.on_connect = on_connect
+m.on_disconnect = on_disconnect
+
+
 for i in ("data_chan", "event_chan", "reply_chan", "cancel_chan"):
     m.subscribe(conf[i])
 

@@ -125,6 +125,7 @@ if IS_A_PI:
     btn = gpiozero.Button(7, False)
 else:
     btn = FakeButton()
+global m
 m = mqtt.Client()
 try:
     gpspoll = GpsPoller()
@@ -141,6 +142,38 @@ timed = False
 level = 0
 presses = 0
 last_time = 0
+
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        global connected
+        connected = True
+
+
+def on_disconnect(client, userdata, rc):
+    if rc:
+        global connected
+        connected = False
+        connect()
+
+
+def connect():
+    global connected
+    global m
+    attempt = 0
+    while not connected:
+        attempt += 1
+        try:
+            m = mqtt.Client()
+            m.on_connect = on_connect
+            m.on_disconnect = on_disconnect
+            m.connect(ADDRESS)
+            m.loop_start()
+        except:
+            pass
+
+m.on_connect = on_connect
+m.on_disconnect = on_disconnect
 
 
 def timer():
