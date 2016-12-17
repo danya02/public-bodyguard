@@ -54,6 +54,8 @@ class GpsPoller(threading.Thread):
             os.popen("sudo gpsd /dev/ttyUSB0")
             time.sleep(2)
             gpsd.connect()
+        for i in ["latitude", "longitude", "altitude", "accuracy"]:
+            object.__setattr__(self, i, 0)
 
     def run(self):
         while 1:
@@ -112,6 +114,7 @@ class FakeButton(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.when_pressed = None
+        self.daemon = True
         self.start()
 
 if IS_A_PI:
