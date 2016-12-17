@@ -38,6 +38,7 @@ try:
 except:
     uid = str(uuid.uuid4())
     open("uuid.txt", "w").write(uid)
+conf = json.load(open("config.json"))
 
 
 class Void:
@@ -125,6 +126,7 @@ m = mqtt.Client()
 try:
     gpspoll = GpsPoller()
 except:
+    assert(conf["debug"])
     print("-----WARNING-----", "No GPS module detected.",
           "This program will work in simulation mode.", sep="\n")
     gpspoll = FakeGpsPoller(INITPLACE)
@@ -163,7 +165,6 @@ def send_event(level):
     event = {"uuid": uid, "euid": str(uuid.uuid1()), "level": level,
              "location": [gpspoll.latitude, gpspoll.longitude,
                           gpspoll.altitude, gpspoll.accuracy]}
-    m.publish(json.load(open("config.json"))["event_chan"],
-              payload=json.dumps(event))
+    m.publish(conf["event_chan"], payload=json.dumps(event))
 while 1:
     pass
