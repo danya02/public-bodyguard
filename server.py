@@ -33,8 +33,6 @@ except:
     log = []
 global messages
 messages = 0
-m = mqtt.Client()
-m.connect("127.0.0.1")
 
 
 def on_connect(client, userdata, flags, rc):
@@ -61,16 +59,16 @@ def connect():
             m.on_connect = on_connect
             m.on_disconnect = on_disconnect
             m.connect("127.0.0.1")
+            for i in ("data_chan", "event_chan", "reply_chan", "cancel_chan"):
+                m.subscribe(conf[i])
             m.loop_start()
         except:
             pass
 
+m = None
+on_disconnect()
 m.on_connect = on_connect
 m.on_disconnect = on_disconnect
-
-
-for i in ("data_chan", "event_chan", "reply_chan", "cancel_chan"):
-    m.subscribe(conf[i])
 
 
 class Event:
