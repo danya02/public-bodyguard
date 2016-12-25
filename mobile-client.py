@@ -32,6 +32,10 @@ except:
     IS_A_PI = False
 ADDRESS = "127.0.0.1"
 INITPLACE = [55.806162385322, 37.542187524385, 500, 10]
+SEND_IMAGES = False
+if SEND_IMAGES:
+    import picamera
+    c = picamera.PiCamera()
 global uid
 try:
     uid = open("uuid.txt").read()
@@ -198,6 +202,12 @@ btn.when_pressed = press
 
 def send_event(level):
     global uid
+    if SEND_IMAGES:
+        global c
+        c.capture("/tmp/image.jpg")
+        with open("/tmp/image.jpg", "rb") as fobj:
+            image_send = bytes(uid, "utf8") + b"::" + fobj.read()
+        m.publish(conf["data_chan"], payload=image_send)
     event = {"uuid": uid, "euid": str(uuid.uuid1()), "level": level,
              "location": [gpspoll.latitude, gpspoll.longitude,
                           gpspoll.altitude, gpspoll.accuracy]}
