@@ -66,7 +66,7 @@ def connect():
             pass
 
 m = None
-on_disconnect()
+on_disconnect(None, None, True)
 m.on_connect = on_connect
 m.on_disconnect = on_disconnect
 
@@ -208,17 +208,19 @@ def parser(client, userdata, msg):
     global messages
     global events
     global to_cancel
+    payload = msg.payload if isinstance(
+        msg.payload, str) else str(msg.payload, "utf8")
     messages += 1
-    log += [{"topic": msg.topic, "payload": msg.payload}]
+    log += [{"topic": msg.topic, "payload": payload}]
     if messages == conf["limit_to_save"] + 1:
         messages = 0
         json.dump({"log": log}, open(conf["path_to_log"], "w"))
         json.dump({"events": events}, open(conf["path_to_event_list"], "w"))
     if msg.topic == conf["data_chan"]:
-        open(conf["path_to_data_folder"] + msg.payload.partition(
+        open(conf["path_to_data_folder"] + payload.partition(
             "::")[0], "w").write(msg.payload.partition("::")[2])
     elif msg.topic == conf["event_chan"]:
-        message = json.loads(msg.payload)
+        message = json.loads(payload)
         message.update({"timestamp": time.time()})
         message = Event(message)
         if conf["debug"]:
@@ -229,8 +231,8 @@ def parser(client, userdata, msg):
         events += [message]
     elif msg.topic == conf["cancel_chan"]:
         for i in events:
-            if msg.payload.split("::")[0] == i.uuid and \
-               msg.payload.split("::")[1] == i.euid:
+            if payload.split("::")[0] == i.uuid and \
+               payload.split("::")[1] == i.euid:
                 to_cancel.extend([i])
 m.on_message = parser
 m.loop_forever()
