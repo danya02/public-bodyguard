@@ -103,7 +103,8 @@ class Event:
     def save(self):
         global conf
         output = {"timestamp": self.timestamp,
-                  "uuid": self.uuid, "euid": self.euid}
+                  "uuid": self.uuid, "euid": self.euid,
+                  "location": self.location, "level": self.level}
         json.dump(output, open(
             conf["path_to_event_dir"] + self.uuid + ".json", "w"))
 
