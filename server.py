@@ -21,6 +21,7 @@ import time
 import os
 import threading
 import geopy
+import urllib.request
 import uuid
 import geopy.distance
 global to_cancel
@@ -118,6 +119,12 @@ for i in os.listdir(conf["path_to_event_dir"]):
 
 
 class EventHandler:
+    def send(self, lat=0, lon=0, alt=0, level=0, uuid=0, euid=0):
+        pass
+
+    def __call__(self, lat=0, lon=0, alt=0, level=0, uuid=0, euid=0):
+        self.send(lat, lon, alt, level, uuid, euid)
+
     def __setattr__(self, name, value):
         object.__setattr__(self, name, value)
         if name == "long":
@@ -134,6 +141,8 @@ class EventHandler:
     def __init__(self, json_obj=None):
         self.location = [0, 0]
         self.levels = [1, 2, 3]
+        self.type = "null"
+        self.param = None
         self.uuid = "00000000-0000-0000-0000-000000000000"
         self.name = ""
         if isinstance(json_obj, dict):
@@ -143,10 +152,25 @@ class EventHandler:
     def save(self):
         global conf
         output = {"location": self.location, "levels": self.level,
-                  "uuid": self.uuid, "name": self.name}
+                  "uuid": self.uuid, "name": self.name, "type": self.type,
+                  "param": str(self.param)}
         json.dump(output, open(conf["path_to_event_handlers_dir"] + str(
             uuid.uuid3(uuid.UUID("00000000-0000-0000-0000-000000000000"),
                        self.name)) + ".json", "w"))
+
+
+class HTTPGetEventHandler(EventHandler):
+    def __init__(self, url_schema, json_obj=None):
+        EventHandler.__init__(self, json_obj=json_obj)
+        self.type = "http"
+        self.param = url_schema
+
+    def send(self, event):
+        with urllib.request.urlopen(
+            self.param.format(loc=event.location, level=event.level,
+                              uuid=event.uuid, euid=event.euid)) as o:
+            o.read()
+
 
 global event_handlers
 event_handlers = []
