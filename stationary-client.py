@@ -17,7 +17,7 @@
 
 import paho.mqtt.client as mqtt
 import subprocess
-import requests
+import urllib.requests
 import json
 import uuid
 import os
@@ -61,7 +61,9 @@ class MapGenerator:
             addr += str(i["content"])
             if not j == len(self.points):
                 addr = addr + "~"
-        open("/tmp/img.png", "wb").write(requests.get(addr).content)
+        with open(
+           "/tmp/img.png", "wb") as o, urllib.requests.urlopen(addr) as i:
+            o.write(i.read())
         return "/tmp/img.png"
 
     def __str__(self):
