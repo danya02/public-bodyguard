@@ -109,7 +109,10 @@ def parser(client, userdata, message):
             except:
                 pass
     elif message.topic == "/user/events":
-        payload = json.loads(message.payload)
+        try:
+            payload = json.loads(message.payload)
+        except:
+            payload = json.loads(str(message.payload, "utf8"))
         if not distance([self_lat, self_long],
                         payload["location"]) > conf["l" +
                                                     str(payload["level"])]:
