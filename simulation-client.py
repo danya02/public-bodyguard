@@ -15,12 +15,16 @@
 
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+import json
 import urllib.request
+import uuid
+
 import pygame
 import threading
+import paho.mqtt.client as mqtt
 
 d = None
+m = None
 lon = 55.75
 lat = 37.62
 kind = 3
@@ -34,7 +38,7 @@ updates_left = 9001
 map_chars = None
 
 
-def get_map(points, meta, data, download=True):
+def get_map(points: list, meta: dict, data: dict, download=True):
     if not download:
         return '/tmp/img.png'
     addr = "http://static-maps.yandex.ru/1.x/?"
@@ -56,17 +60,75 @@ def get_map(points, meta, data, download=True):
     return pygame.image.load('/tmp/img.png')
 
 
+def mqtt_on_connect(client: mqtt.Client, userdata, flags: dict, rc: int):
+    global message, message_color, blink_message, updates_left
+    if rc == 0:
+        message = 'Connected to {}!'.format(client._host)
+        message_color = pygame.Color(0, 255, 0, 255)
+        blink_message = False
+        updates_left = 25
+    elif rc in [1, 2, 3, 4, 5]:
+        message = 'Error connecting to {} - {}.'.format(client._host,
+                                                        ['incorrect protocol version', 'invalid client identifier',
+                                                         'server unavailable', 'bad username or password',
+                                                         'not authorised'][rc])
+        message_color = pygame.Color(255, 0, 0, 255)
+        blink_message = True
+        updates_left = 9001
+    else:
+        message = 'Unknown return code: {}'.format(rc)
+        message_color = pygame.Color(0, 0, 0, 255)
+        blink_message = False
+        updates_left = 25
+
+
+def mqtt_on_disconnect(client: mqtt.Client, userdata, rc: int):
+    global message, message_color, blink_message, updates_left, being_sent
+    being_sent = False
+    message = 'Disconnected from {}! Reconnecting...'.format(client._host)
+    message_color = pygame.Color(255, 0, 0, 255)
+    blink_message = True
+    updates_left = 9001
+
+
+def mqtt_on_publish(client: mqtt.Client, userdata, mid: int):
+    global message, message_color, blink_message, updates_left, being_sent
+    being_sent = False
+    message = 'SENT!'
+    message_color = pygame.Color(0, 255, 0, 255)
+    updates_left = 5
+    blink_message = False
+
+
+def mqtt_init():
+    global m, message, message_color, blink_message, updates_left
+    m = mqtt.Client()
+    m.on_connect = mqtt_on_connect
+    m.on_disconnect = mqtt_on_disconnect
+    m.on_publish = mqtt_on_publish
+    ip = '127.0.0.1'
+    message = 'Connecting to {}...'.format(ip)
+    message_color = pygame.Color(0, 0, 0, 255)
+    blink_message = True
+    updates_left = 9001
+    mqtt_loop = threading.Thread(target=lambda: m.loop_forever(), name="MQTT thread", daemon=True)
+    mqtt_loop.start()
+    m.connect(ip)
+
+
 def init():
     global d
     pygame.init()
     d = pygame.display.set_mode((650, 450))
     draw_loop = threading.Thread(target=redraw_image, name="Draw thread", daemon=True)
     draw_loop.start()
+    mqtt_init()
 
 
 def send_event(level: int, lat: float, lon: float):
-    pygame.time.delay(5000)
-    raise RuntimeError('Stub!')
+    m.publish('/user/events', payload=json.dumps(
+        {"uuid": '00000000-0000-0000-0000-000000000000', "euid": str(uuid.uuid1()), "level": level,
+         "location": [lat, lon, 0, 0]}))
 
 
 def update_coords(clickx: int, clicky: int):
@@ -153,21 +215,7 @@ def loop():
                         updates_left = 9001
                         blink_message = True
                         update_image()
-                        try:
-                            send_event(kind, lat, lon)
-                        except:
-                            message = 'ERROR!'
-                            blink_message = False
-                            message_color = pygame.Color(255, 0, 0, 255)
-                            updates_left = 10
-                            update_image()
-                        else:
-                            message = 'OK!'
-                            blink_message = False
-                            message_color = pygame.Color(0, 255, 0, 255)
-                            updates_left = 10
-                            update_image()
-                        being_sent = False
+                        send_event(kind, lat, lon)
                     elif i.button == 3:
                         kind += 1
                         if kind > 3:
