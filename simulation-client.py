@@ -144,6 +144,14 @@ def update_coords(clickx: int, clicky: int):
         lat += 0.00001 * abs(half_wide - clickx) * (18 - zoom) ** 3
     else:
         lat -= 0.00001 * abs(half_wide - clickx) * (18 - zoom) ** 3
+    if lat>180:
+        lat=-180.0
+    elif lat<-180:
+        lat=180.0
+    if lon>90:
+        lon=-89.99999
+    elif lon<-90:
+        lon=89.99999
 
 
 def update_image():
