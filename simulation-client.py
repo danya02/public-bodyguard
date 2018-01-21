@@ -18,13 +18,19 @@
 
 import urllib.request
 import pygame
-import time
+import threading
 
 d = None
 lon = 55.75
 lat = 37.62
 kind = 3
 zoom = 10
+map = pygame.Surface((0,0))
+being_sent=False
+blink_message = False
+message=''
+message_color = pygame.Color(0,0,0,0)
+updates_left = 9001
 map_chars = None
 
 
@@ -47,14 +53,19 @@ def get_map(points, meta, data, download=True):
     with open(
             "/tmp/img.png", "wb") as o, urllib.request.urlopen(addr) as i:
         o.write(i.read())
-    return "/tmp/img.png"
+    return pygame.image.load('/tmp/img.png')
 
 
 def init():
     global d
     pygame.init()
     d = pygame.display.set_mode((650, 450))
+    draw_loop = threading.Thread(target=redraw_image, name="Draw thread", daemon=True)
+    draw_loop.start()
 
+def send_event(level:int, lat:float, lon:float):
+    pygame.time.delay(5000)
+    raise RuntimeError('Stub!')
 
 def update_coords(clickx: int, clicky: int):
     global lon
@@ -72,52 +83,102 @@ def update_coords(clickx: int, clicky: int):
 
 
 def update_image():
-    global map_chars
+    global map, map_chars, updates_left, message, message_color
     if map_chars != ([], {'lang': 'ru_RU', 'width': d.get_width(), 'height': d.get_height(),
                           'type': 'map'}, {'z': zoom, 'll': '{},{}'.format(str(lat), str(lon))}):
-        m = get_map([], {'lang': 'ru_RU', 'width': d.get_width(), 'height': d.get_height(),
+        map = get_map([], {'lang': 'ru_RU', 'width': d.get_width(), 'height': d.get_height(),
                          'type': 'map'}, {'z': zoom, 'll': '{},{}'.format(str(lat), str(lon))})
         map_chars = ([], {'lang': 'ru_RU', 'width': d.get_width(), 'height': d.get_height(),
                           'type': 'map'}, {'z': zoom, 'll': '{},{}'.format(str(lat), str(lon))})
-    i = pygame.image.load(get_map([], {}, {}, False))
-    d.blit(i, (0, 0))
-    pygame.draw.line(d, pygame.Color(['red', 'yellow', 'green'][kind - 1]), (0, d.get_height() // 2),
-                     (d.get_width(), d.get_height() // 2), 3)
-    pygame.draw.line(d, pygame.Color(['red', 'yellow', 'green'][kind - 1]), (d.get_width() // 2, 0),
-                     (d.get_width() // 2, d.get_height()), 3)
-    f=pygame.font.SysFont('BadFontMono', 32)
-    lon_t=f.render('LON:{:.8}'.format(lon),False, pygame.Color('red'))
-    lat_t=f.render('LAT:{:.8}'.format(lat),False, pygame.Color('red'))
-    d.blit(lon_t, (d.get_width()/2, d.get_height()/2-32))
-    d.blit(lat_t, (d.get_width()/2, d.get_height()/2))
 
+    updates_left -=1
+    if updates_left<=0:
+        message = ''
+        message_color = pygame.Color(0, 0, 0, 0)
+        updates_left = 9001
 
-    pygame.display.flip()
+def redraw_image():
+    blink_phase = False
+    blink_tick=0
+    f = pygame.font.SysFont('BadFontMono', 32)
+    while 1:
+        d.blit(map, (0, 0))
+        pygame.draw.line(d, pygame.Color(['red', 'yellow', 'green'][kind - 1]), (0, d.get_height() // 2),
+                         (d.get_width(), d.get_height() // 2), 3)
+        pygame.draw.line(d, pygame.Color(['red', 'yellow', 'green'][kind - 1]), (d.get_width() // 2, 0),
+                         (d.get_width() // 2, d.get_height()), 3)
+        if being_sent:
+            pygame.draw.line(d, pygame.Color(['red', 'yellow', 'green'][kind - 1]), (0,0),
+                             (d.get_width(), d.get_height()), 3)
+            pygame.draw.line(d, pygame.Color(['red', 'yellow', 'green'][kind - 1]), (d.get_width(), 0),
+                             (0, d.get_height()), 3)
+        lon_t = f.render('LON:{:.8}'.format(lon), False, pygame.Color('red'))
+        lat_t = f.render('LAT:{:.8}'.format(lat), False, pygame.Color('red'))
+        message_t = f.render(message, False, message_color)
+        d.blit(lon_t, (d.get_width() / 2, d.get_height() / 2 - 32))
+        d.blit(lat_t, (d.get_width() / 2, d.get_height() / 2))
+        if not blink_message:
+            d.blit(message_t, (0, 0))
+            blink_phase = False
+            blink_tick=0
+        else:
+            blink_tick+=1
+            if blink_tick>=2:
+                blink_tick=0
+                blink_phase=not blink_phase
+            if blink_phase:
+                d.blit(message_t, (0, 0))
+        pygame.time.delay(50)
+        pygame.display.flip()
+
 
 
 def loop():
-    global zoom, kind
+    global zoom, kind, being_sent,message,message_color,updates_left, blink_message
     update_image()
     while 1:
         d=False
         for i in pygame.event.get():
-            if i.type == pygame.MOUSEBUTTONDOWN:
-                if i.button == 1:
-                    update_coords(i.pos[0], i.pos[1])
-                    d = True
-                elif i.button == 3:
-                    kind += 1
-                    if kind > 3:
-                        kind = 1
-                    d = True
-                elif i.button == 4:
-                    zoom += 1
-                    zoom = min(zoom, 17)
-                    d = True
-                elif i.button == 5:
-                    zoom -= 1
-                    zoom = max(zoom, 0)
-                    d = True
+            if not being_sent:
+                if i.type == pygame.MOUSEBUTTONDOWN:
+                    if i.button == 1:
+                        update_coords(i.pos[0], i.pos[1])
+                        d = True
+                    elif i.button == 2:
+                        being_sent = True
+                        message = 'WAIT!'
+                        message_color = pygame.Color(0,0,0,255)
+                        updates_left=9001
+                        blink_message=True
+                        update_image()
+                        try:
+                            send_event(kind, lat, lon)
+                        except:
+                            message = 'ERROR!'
+                            blink_message = False
+                            message_color = pygame.Color(255,0,  0, 255)
+                            updates_left = 10
+                            update_image()
+                        else:
+                            message = 'OK!'
+                            blink_message = False
+                            message_color = pygame.Color(0,255,  0, 255)
+                            updates_left = 10
+                            update_image()
+                        being_sent = False
+                    elif i.button == 3:
+                        kind += 1
+                        if kind > 3:
+                            kind = 1
+                        d = True
+                    elif i.button == 4:
+                        zoom += 1
+                        zoom = min(zoom, 17)
+                        d = True
+                    elif i.button == 5:
+                        zoom -= 1
+                        zoom = max(zoom, 0)
+                        d = True
 
         pygame.time.delay(50)
         if d:
