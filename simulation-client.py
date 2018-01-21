@@ -25,70 +25,72 @@ lon = 55.75
 lat = 37.62
 kind = 3
 zoom = 10
+map_chars = None
 
 
-class MapGenerator:
-    def __init__(self, pt, meta,data={}):
-        if not isinstance(pt, list):
-            raise TypeError("Expected <type 'list'>, got " + str(type(pt)) +
-                            " instead")
-        if not isinstance(meta, dict):
-            raise TypeError("Expected <type 'dict'>, got " + str(type(meta)) +
-                            " instead")
-        self.points = pt
-        self.meta = meta
-        self.data = data
-
-    def get_file(self):
-        addr = "http://static-maps.yandex.ru/1.x/?"
-        addr += "l=" + str(self.meta["type"]) + "&size="
-        addr += str(self.meta["width"]) + "," + str(self.meta["height"])
-        addr += "&lang=" + str(self.meta["lang"]) + ("&pt=" if not self.points == [] else '')
-        for i in self.data:
-            addr+='&{}={}'.format(i, self.data[i])
-        if not self.points == []:
-            for i, j in zip(self.points, range(len(self.points) + 1)[1:]):
-                addr += str(i["lat"]) + "," + str(i["long"]) + ","
-                addr += str(i["style"]) + str(i["color"]) + str(i["size"])
-                addr += str(i["content"])
-                if not j == len(self.points):
-                    addr = addr + "~"
-        with open(
-                "/tmp/img.png", "wb") as o, urllib.request.urlopen(addr) as i:
-            o.write(i.read())
-        return "/tmp/img.png"
-
-    def __str__(self):
-        return self.get_file()
+def get_map(points, meta, data, download=True):
+    if not download:
+        return '/tmp/img.png'
+    addr = "http://static-maps.yandex.ru/1.x/?"
+    addr += "l=" + str(meta["type"]) + "&size="
+    addr += str(meta["width"]) + "," + str(meta["height"])
+    addr += "&lang=" + str(meta["lang"]) + ("&pt=" if not points == [] else '')
+    for i in data:
+        addr += '&{}={}'.format(i, data[i])
+    if not points == []:
+        for i, j in zip(points, range(len(points) + 1)[1:]):
+            addr += str(i["lat"]) + "," + str(i["long"]) + ","
+            addr += str(i["style"]) + str(i["color"]) + str(i["size"])
+            addr += str(i["content"])
+            if not j == len(points):
+                addr = addr + "~"
+    with open(
+            "/tmp/img.png", "wb") as o, urllib.request.urlopen(addr) as i:
+        o.write(i.read())
+    return "/tmp/img.png"
 
 
 def init():
     global d
     pygame.init()
-    d = pygame.display.set_mode((320, 240))
+    d = pygame.display.set_mode((650, 450))
 
 
-def update_coords(clickx, clicky):
+def update_coords(clickx: int, clicky: int):
     global lon
     global lat
-    if clicky > d.get_height() / 2:
-        lon -= 0.0001
+    half_wide = d.get_width()/2
+    half_high = d.get_height()/2
+    if clicky > half_high:
+        lon -= 0.000005* abs(half_high-clicky) * (18-zoom)**3
     else:
-        lon += 0.0001
-    if clickx > d.get_width() / 2:
-        lat += 0.0001
+        lon += 0.000005* abs(half_high-clicky) * (18-zoom)**3
+    if clickx > half_wide:
+        lat += 0.00001 * abs(half_wide-clickx) * (18-zoom)**3
     else:
-        lat -= 0.0001
+        lat -= 0.00001* abs(half_wide-clickx) * (18-zoom)**3
 
 
 def update_image():
-    m = MapGenerator([], {'lang': 'ru_RU', 'width': d.get_width(), 'height': d.get_height(),
+    global map_chars
+    if map_chars != ([], {'lang': 'ru_RU', 'width': d.get_width(), 'height': d.get_height(),
+                          'type': 'map'}, {'z': zoom, 'll': '{},{}'.format(str(lat), str(lon))}):
+        m = get_map([], {'lang': 'ru_RU', 'width': d.get_width(), 'height': d.get_height(),
+                         'type': 'map'}, {'z': zoom, 'll': '{},{}'.format(str(lat), str(lon))})
+        map_chars = ([], {'lang': 'ru_RU', 'width': d.get_width(), 'height': d.get_height(),
                           'type': 'map'}, {'z': zoom, 'll': '{},{}'.format(str(lat), str(lon))})
-    i = pygame.image.load(m.get_file())
-    del m
+    i = pygame.image.load(get_map([], {}, {}, False))
     d.blit(i, (0, 0))
-    pygame.draw.line(d, pygame.Color(['red','yellow','green'][kind-1]), (0, d.get_height()//2), (d.get_width(), d.get_height()//2), 3)
-    pygame.draw.line(d, pygame.Color(['red','yellow','green'][kind-1]), (d.get_width()//2,0), (d.get_width()//2, d.get_height()), 3)
+    pygame.draw.line(d, pygame.Color(['red', 'yellow', 'green'][kind - 1]), (0, d.get_height() // 2),
+                     (d.get_width(), d.get_height() // 2), 3)
+    pygame.draw.line(d, pygame.Color(['red', 'yellow', 'green'][kind - 1]), (d.get_width() // 2, 0),
+                     (d.get_width() // 2, d.get_height()), 3)
+    f=pygame.font.SysFont('BadFontMono', 32)
+    lon_t=f.render('LON:{:.8}'.format(lon),False, pygame.Color('red'))
+    lat_t=f.render('LAT:{:.8}'.format(lat),False, pygame.Color('red'))
+    d.blit(lon_t, (d.get_width()/2, d.get_height()/2-32))
+    d.blit(lat_t, (d.get_width()/2, d.get_height()/2))
+
 
     pygame.display.flip()
 
@@ -97,27 +99,29 @@ def loop():
     global zoom, kind
     update_image()
     while 1:
+        d=False
         for i in pygame.event.get():
             if i.type == pygame.MOUSEBUTTONDOWN:
                 if i.button == 1:
                     update_coords(i.pos[0], i.pos[1])
-                    update_image()
+                    d = True
                 elif i.button == 3:
-                    kind+=1
-                    if kind>3:
-                        kind=1
-                    update_image()
+                    kind += 1
+                    if kind > 3:
+                        kind = 1
+                    d = True
                 elif i.button == 4:
                     zoom += 1
                     zoom = min(zoom, 17)
-                    update_image()
+                    d = True
                 elif i.button == 5:
                     zoom -= 1
                     zoom = max(zoom, 0)
-                    update_image()
+                    d = True
 
-        time.sleep(0.1)
-
+        pygame.time.delay(50)
+        if d:
+            update_image()
 
 if __name__ == '__main__':
     init()
