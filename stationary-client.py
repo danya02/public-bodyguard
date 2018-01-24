@@ -46,8 +46,9 @@ except FileNotFoundError:
     open("uuid.txt", "w").write(uid)
 self_lat = 55.806162385322
 self_long = 37.542187524385
-conf = {"l1": 500, "l2": 500, "l3": 500}
-
+conf = {"l1": 50000000, "l2": 500000000, "l3": 500000000}
+if not THIS_PI:
+    pygame.init()
 
 class PygameButton(threading.Thread):
     def __init__(self, keys):
@@ -60,6 +61,8 @@ class PygameButton(threading.Thread):
 
     def run(self):
         while 1:
+            pygame.time.delay(100)
+            self.is_pressed = False
             k = pygame.key.get_pressed()
             for i in self.keys:
                 self.is_pressed &= k[i]
@@ -128,7 +131,7 @@ class PicDisplayerPygame:
     def stop(self):
         if not self.alive:
             raise RuntimeError("Attempted to stop a stopped client")
-        pygame.display.quit()
+        pygame.display.set_mode((1,1))
         self.alive = False
 
 
@@ -143,6 +146,7 @@ def distance(point1, point2):
 def parser(client, userdata, message):
     global uid
     global p
+    print(message.payload)
     if message.topic == "/user/cancel":
         payload = message.payload
         payload = str(payload)
@@ -171,9 +175,9 @@ def parser(client, userdata, message):
                                "style": "round", "color": "", "size": "",
                                "content": ""}, {"lat": payload["location"][0],
                                                 "long": payload["location"][1],
-                                                "color": "rd", "style": "pm2",
+                                                "color": ["rd","or","gn"][payload["level"]-1], "style": "pm2",
                                                 "size": "l", "content": ""}],
-                             {"lang": "ru_RU", "width": 320, "height": 240,
+                             {"lang": "ru_RU", "width": 320 if THIS_PI else 650, "height": 240 if THIS_PI else 450,
                               "type": "map"}).get_file()
             if THIS_PI:
                 p = PicDisplayerFbi(m)
@@ -182,14 +186,14 @@ def parser(client, userdata, message):
             p.euid = payload["euid"]
             p.uuid = payload["uuid"]
         # magic.gpio.display("Event nearby")
-        while (not accept.is_pressed) or (not decline.is_pressed):
-            pass
-        if accept.is_pressed:
-            client.publish("/user/replies", uid + "@" + payload["euid"] + "::1")
-        elif decline.is_pressed:
-            client.publish("/user/replies", uid + "@" + payload["euid"] + "::0")
-            # magic.gpio.display("")
-            p.stop()
+#        while (not accept.is_pressed) or (not decline.is_pressed):
+#            pass
+#        if accept.is_pressed:
+#            client.publish("/user/replies", uid + "@" + payload["euid"] + "::1")
+#        elif decline.is_pressed:
+#            client.publish("/user/replies", uid + "@" + payload["euid"] + "::0")
+#            # magic.gpio.display("")
+#            p.stop()
 
 
 m.on_message = parser
