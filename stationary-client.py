@@ -15,6 +15,13 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+try:
+    import RPi.GPIO
+    THIS_PI = True
+except ImportError:
+    THIS_PI = False
+
 import paho.mqtt.client as mqtt
 import subprocess
 import urllib.request
@@ -23,20 +30,47 @@ import uuid
 import os
 import geopy
 import geopy.distance
-from gpiozero import Button
+import threading
+
+if THIS_PI:
+    from gpiozero import Button
+else:
+    import pygame
 m = mqtt.Client()
 m.connect("127.0.0.1")
 global uid
 try:
     uid = open("uuid.txt").read()
-except:
+except FileNotFoundError:
     uid = str(uuid.uuid4())
     open("uuid.txt", "w").write(uid)
 self_lat = 55.806162385322
 self_long = 37.542187524385
 conf = {"l1": 500, "l2": 500, "l3": 500}
-accept = Button(20)
-decline = Button(21)
+
+
+class PygameButton(threading.Thread):
+    def __init__(self, keys):
+        super().__init__()
+        self.name = 'Pygame key capturer looking at keys {}'.format(keys)
+        self.daemon = True
+        self.keys = keys
+        self.is_pressed = False
+        self.start()
+
+    def run(self):
+        while 1:
+            k = pygame.key.get_pressed()
+            for i in self.keys:
+                self.is_pressed &= k[i]
+
+
+if THIS_PI:
+    accept = Button(20)
+    decline = Button(21)
+else:
+    accept = PygameButton([pygame.K_RETURN, pygame.K_y, pygame.K_SPACE])
+    decline = PygameButton([pygame.K_ESCAPE, pygame.K_n, pygame.K_BREAK])
 
 
 class MapGenerator:
@@ -55,14 +89,14 @@ class MapGenerator:
         addr += "l=" + str(self.meta["type"]) + "&size="
         addr += str(self.meta["width"]) + "," + str(self.meta["height"])
         addr += "&lang=" + str(self.meta["lang"]) + "&pt="
-        for i, j in zip(self.points, range(len(self.points)+1)[1:]):
-            addr += str(i["lat"]) + ","+str(i["long"]) + ","
+        for i, j in zip(self.points, range(len(self.points) + 1)[1:]):
+            addr += str(i["lat"]) + "," + str(i["long"]) + ","
             addr += str(i["style"]) + str(i["color"]) + str(i["size"])
             addr += str(i["content"])
             if not j == len(self.points):
                 addr = addr + "~"
         with open(
-           "/tmp/img.png", "wb") as o, urllib.request.urlopen(addr) as i:
+                "/tmp/img.png", "wb") as o, urllib.request.urlopen(addr) as i:
             o.write(i.read())
         return "/tmp/img.png"
 
@@ -70,7 +104,7 @@ class MapGenerator:
         return self.get_file()
 
 
-class PicDisplayer:
+class PicDisplayerFbi:
     def __init__(self, pic, fb="/dev/fb0"):
         self.viewer = subprocess.Popen(["sudo", "fbi", str(pic), "-a", "-d",
                                         str(fb), "-noverbose"])
@@ -81,6 +115,23 @@ class PicDisplayer:
             raise RuntimeError("Attempted to stop a stopped client")
         os.popen("killall fbi").read()
         self.alive = False
+
+
+class PicDisplayerPygame:
+    def __init__(self, pic):
+        self.alive = True
+        self.pic = pygame.image.load(pic)
+        self.screen = pygame.display.set_mode(self.pic.get_size())
+        self.screen.blit(self.pic, (0, 0))
+        pygame.display.flip()
+
+    def stop(self):
+        if not self.alive:
+            raise RuntimeError("Attempted to stop a stopped client")
+        pygame.display.quit()
+        self.alive = False
+
+
 m.subscribe("/user/events")
 m.subscribe("/user/cancel")
 
@@ -99,7 +150,7 @@ def parser(client, userdata, message):
         p.euid = str(p.euid)
         print(payload)
         if str(payload.split("::")[0]) == str(p.uuid) and str(payload.split(
-          "::")[1]) == str(p.euid):
+                "::")[1]) == str(p.euid):
             try:
                 p.stop()
                 # magic.gpio.display("Event resolved")
@@ -115,26 +166,31 @@ def parser(client, userdata, message):
             payload = json.loads(str(message.payload, "utf8"))
         if not distance([self_lat, self_long],
                         payload["location"]) > conf["l" +
-                                                    str(payload["level"])]:
+                str(payload["level"])]:
             m = MapGenerator([{"lat": self_lat, "long": self_long,
                                "style": "round", "color": "", "size": "",
                                "content": ""}, {"lat": payload["location"][0],
                                                 "long": payload["location"][1],
                                                 "color": "rd", "style": "pm2",
-                                                "size": "l", "content":""}],
+                                                "size": "l", "content": ""}],
                              {"lang": "ru_RU", "width": 320, "height": 240,
                               "type": "map"}).get_file()
-            p = PicDisplayer(m)
+            if THIS_PI:
+                p = PicDisplayerFbi(m)
+            else:
+                p = PicDisplayerPygame(m)
             p.euid = payload["euid"]
             p.uuid = payload["uuid"]
         # magic.gpio.display("Event nearby")
         while (not accept.is_pressed) or (not decline.is_pressed):
             pass
         if accept.is_pressed:
-            client.publish("/user/replies", uid+"@"+payload["euid"]+"::1")
+            client.publish("/user/replies", uid + "@" + payload["euid"] + "::1")
         elif decline.is_pressed:
-            client.publish("/user/replies", uid+"@"+payload["euid"]+"::0")
+            client.publish("/user/replies", uid + "@" + payload["euid"] + "::0")
             # magic.gpio.display("")
             p.stop()
+
+
 m.on_message = parser
 m.loop_forever()
